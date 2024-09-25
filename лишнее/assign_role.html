@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Назначить роль</title>
+</head>
+<body>
+    <h1>Назначить роль пользователю</h1>
+    <form method="POST">
+        <label for="user_id">ID пользователя:</label>
+        <input type="text" id="user_id" name="user_id" required>
+        <br>
+        <label for="role">Роль:</label>
+        <select id="role" name="role">
+            <option value="user">Пользователь</option>
+            <option value="admin">Администратор</option>
+        </select>
+        <br>
+        <button type="submit">Назначить роль</button>
+    </form>
+</body>
+</html>

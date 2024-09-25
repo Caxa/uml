@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная страница</title>
+</head>
+<body>
+    <h1>Добро пожаловать, {{ .UserName }}</h1>
+    <p>ID пользователя: {{ .UserID }}</p>
+    <p>Ваша роль: {{ .Role }}</p>
+
+    {{ if eq (lower .Role) "admin" }}
+    <form action="/admin_page" method="GET">
+        <button type="submit">Перейти на админскую страницу</button>
+    </form>
+    {{ end }}
+</body>
+</html>

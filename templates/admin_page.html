@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница администратора</title>
+</head>
+<body>
+    <h1>Добро пожаловать на админскую страницу!</h1>
+    <p>Здесь могут находиться функции и инструменты для администраторов.</p>
+
+    <h2>Изменить данные пользователя</h2>
+    <form action="/update_user" method="POST">
+        <label for="user_id">ID пользователя:</label>
+        <input type="text" id="user_id" name="user_id" required><br>
+
+        <label for="new_login">Новый логин:</label>
+        <input type="text" id="new_login" name="new_login"><br>
+
+        <label for="new_password">Новый пароль:</label>
+        <input type="password" id="new_password" name="new_password"><br>
+
+        <label for="new_role">Новая роль:</label>
+        <select id="new_role" name="new_role">
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select><br><br>
+
+        <button type="submit">Обновить данные</button>
+    </form>
+</body>
+</html>

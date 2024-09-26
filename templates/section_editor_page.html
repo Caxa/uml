@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница Редактора отдела</title>
+</head>
+<body>
+    <h1>Добро пожаловать на страницу Редактора отдела!</h1>
+    <p>Здесь редакторы отделов могут управлять публикациями.</p>
+
+    <h2>Составление списка публикаций</h2>
+    <form action="/section_editor/assign_publications" method="POST">
+        <label for="publication">Публикация:</label>
+        <input type="text" id="publication" name="publication" required><br>
+
+        <label for="author">Автор:</label>
+        <input type="text" id="author" name="author" required><br><br>
+
+        <button type="submit">Распределить по авторам</button>
+    </form>
+
+    <h2>Редактирование публикации</h2>
+    <form action="/section_editor/edit_publication" method="POST">
+        <label for="publication_id">ID Публикации:</label>
+        <input type="text" id="publication_id" name="publication_id" required><br>
+
+        <label for="content">Содержание:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50"></textarea><br><br>
+
+        <button type="submit">Редактировать</button>
+    </form>
+
+    <h2>Разрешение на выкладку публикации</h2>
+    <form action="/section_editor/approve_publication" method="POST">
+        <label for="publication_id_approve">ID Публикации:</label>
+        <input type="text" id="publication_id_approve" name="publication_id_approve" required><br>
+
+        <button type="submit">Разрешить выкладку</button>
+    </form>
+</body>
+</html>

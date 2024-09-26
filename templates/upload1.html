@@ -9,10 +9,45 @@
     <h1>Добро пожаловать, {{ .UserName }}</h1>
     <p>ID пользователя: {{ .UserID }}</p>
     <p>Вы вошли как: {{ .Role }}</p>
-
+    
+    
     {{ if eq .Role "Admin" }}
     <form action="/admin_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
         <button type="submit">Перейти на админскую страницу</button>
+    </form>
+    <form action="/chief_editor_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу главного редактора</button>
+    </form>    
+    <form action="/section_editor_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу редактора раздела</button>
+    </form>
+    <form action="/author_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу автора</button>
+    </form>
+    {{ end }}
+
+    {{ if eq .Role "ChiefEditor" }}
+    <form action="/chief_editor_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу главного редактора</button>
+    </form>
+    {{ end }}
+
+    {{ if eq .Role "SectionEditor" }}
+    <form action="/section_editor_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу редактора отдела</button>
+    </form>
+    {{ end }}
+
+    {{ if eq .Role "Author" }}
+    <form action="/author_page" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Перейти на страницу автора</button>
     </form>
     {{ end }}
 </body>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница Главного редактора</title>
+</head>
+<body>
+    <h1>Добро пожаловать на страницу Главного редактора!</h1>
+    <p>Здесь главные редакторы могут управлять темами новостного выпуска.</p>
+
+    <h2>Составление списка тем новостного выпуска</h2>
+    <form action="/chief_editor/assign_topics" method="POST">
+        <label for="topic">Тема:</label>
+        <input type="text" id="topic" name="topic" required><br>
+
+        <label for="department">Отдел:</label>
+        <select id="department" name="department">
+            <option value="politics">Политика</option>
+            <option value="economy">Экономика</option>
+            <option value="sports">Спорт</option>
+        </select><br><br>
+
+        <button type="submit">Распределить по отделам</button>
+    </form>
+
+    <h2>Проверка наличия подготовленных публикаций</h2>
+    <form action="/chief_editor/check_publications" method="GET">
+        <button type="submit">Проверить публикации</button>
+    </form>
+</body>
+</html>

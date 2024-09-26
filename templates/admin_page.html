@@ -24,9 +24,29 @@
         <select id="new_role" name="new_role">
             <option value="user">User</option>
             <option value="admin">Admin</option>
+            <option value="chief_editor">Chief Editor</option>
+            <option value="section_editor">Section Editor</option>
+            <option value="author">Author</option>
         </select><br><br>
 
         <button type="submit">Обновить данные</button>
     </form>
+
+    <h2>Список всех сотрудников</h2>
+    <form action="/admin/employees" method="GET">
+        <input type="hidden" name="id" value="{{ .UserID }}">
+        <button type="submit">Показать всех сотрудников</button>
+    </form>
+    {{if .Users}} <!-- Проверяем наличие списка сотрудников -->
+    <h3>Сотрудники:</h3>
+    <ul>
+        {{range .Users}}
+        <li>ID: {{.IDuser}}, Логин: {{.Login}}, Роль: {{.Role}}</li>
+        {{end}}
+    </ul>
+    {{else}}
+    <p>Список сотрудников еще не загружен.</p>
+    {{end}}
+    
 </body>
 </html>

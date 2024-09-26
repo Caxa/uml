@@ -12,30 +12,34 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Структура пользователя
 type User struct {
-	IDuser int
-	Role   string // Поле для роли пользователя
+	IDuser   int
+	Login    string
+	Password string
+	Role     string
 }
 
 var Db *sql.DB
 var Tmpl1 = template.Must(template.ParseFiles("templates/register.html"))
-var Tmpl2 = template.Must(template.ParseFiles("templates/upload1.html")) // Главная страница
-var Files []string
+var Tmpl2 = template.Must(template.ParseFiles("templates/upload1.html"))                         // Главная страница
+var TmplAdmin = template.Must(template.ParseFiles("templates/admin_page.html"))                  // Шаблон страницы администратора
+var TmplChiefEditor = template.Must(template.ParseFiles("templates/chief_editor_page.html"))     // Шаблон страницы главного редактора
+var TmplSectionEditor = template.Must(template.ParseFiles("templates/section_editor_page.html")) // Шаблон страницы редактора раздела
+var TmplAuthor = template.Must(template.ParseFiles("templates/author_page.html"))                // Шаблон страницы автора
 
 // Функция для открытия базы данных
 func OpenDatabase() {
 	var err error
 	Db, err = sql.Open("postgres", "user=postgres password=1234 dbname=map sslmode=disable")
 	if err != nil {
-		log.Println("Не удалось подключиться к базе данных:", err)
-	} else {
-		err = Db.Ping()
-		if err != nil {
-			log.Println("Не удалось выполнить ping базы данных:", err)
-		} else {
-			log.Println("Успешно подключено к базе данных")
-		}
+		log.Fatal("Не удалось подключиться к базе данных:", err)
 	}
+	err = Db.Ping()
+	if err != nil {
+		log.Fatal("Не удалось выполнить ping базы данных:", err)
+	}
+	log.Println("Успешно подключено к базе данных")
 }
 
 // Получаем имя пользователя по ID из базы данных
@@ -84,9 +88,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		UserID   int    // ID пользователя
-		UserName string // Имя пользователя
-		Role     string // Роль пользователя
+		UserID   int
+		UserName string
+		Role     string
 	}{
 		UserID:   userID,
 		UserName: userName,
@@ -101,9 +105,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 // Обработчик главной страницы
 func Home(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		Tmpl1.Execute(w, nil) // Отображение страницы регистрации
-	} else if r.Method == "POST" {
+	} else if r.Method == http.MethodPost {
 		login := r.FormValue("login")
 		password := r.FormValue("password")
 		id := AuthenticateUser(r.Context(), login, password)
@@ -128,10 +132,10 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 // Обработчик для регистрации
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		// Отображение страницы регистрации
 		Tmpl1.Execute(w, nil)
-	} else if r.Method == "POST" {
+	} else if r.Method == http.MethodPost {
 		// Обработка формы регистрации
 		err := r.ParseForm()
 		if err != nil {
@@ -191,109 +195,342 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-// Обработчик для отображения страницы создания пользователя
-func CreateUserPage(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		tmpl := template.Must(template.ParseFiles("templates/create_user.html"))
-		err := tmpl.Execute(w, nil)
-		if err != nil {
-			http.Error(w, "Ошибка при выполнении шаблона: "+err.Error(), http.StatusInternalServerError)
-		}
+// Получаем список всех пользователей
+func GetAllUsers() ([]User, error) {
+	query := "SELECT id, login, role FROM users"
+	rows, err := Db.Query(query)
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
+
+	var users []User
+	for rows.Next() {
+		var user User
+		err := rows.Scan(&user.IDuser, &user.Login, &user.Role)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
 }
 
-// Обработчик для создания пользователя
-func CreateUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		err := r.ParseForm()
-		if err != nil {
-			http.Error(w, "Ошибка при обработке формы", http.StatusInternalServerError)
-			return
-		}
-		login := r.FormValue("login")
-		password := r.FormValue("password")
-		role := r.FormValue("role")
+// Обработчик для страницы администратора
+func AdminPage(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("id")
+	if userIDStr == "" {
+		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
+		return
+	}
 
-		hashedPassword, err := HashPassword(password)
-		if err != nil {
-			http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
-			return
-		}
+	// Преобразуем строковый параметр id в целое число
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
 
-		query := "INSERT INTO users (login, password, role) VALUES ($1, $2, $3)"
-		_, err = Db.Exec(query, login, hashedPassword, role)
-		if err != nil {
-			http.Error(w, "Ошибка при создании пользователя", http.StatusInternalServerError)
-			return
-		}
+	// Получаем имя пользователя по его ID
+	userName, err := GetUserNameByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
 
-		http.Redirect(w, r, "/", http.StatusFound)
+	// Получаем роль пользователя по его ID
+	role, err := GetUserRoleByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	// Подготавливаем данные для передачи в шаблон
+	data := struct {
+		UserID   int
+		UserName string
+		Role     string
+	}{
+		UserID:   userID,
+		UserName: userName,
+		Role:     role,
+	}
+
+	// Выполняем рендеринг шаблона для страницы администратора
+	err = TmplAdmin.Execute(w, data)
+	if err != nil {
+		// Проверка, были ли уже отправлены заголовки
+		if w.Header().Get("Content-Type") == "" {
+			log.Printf("привет")
+		}
 		return
 	}
 }
 
-// Обработчик страницы администратора
-func AdminPage(w http.ResponseWriter, r *http.Request) {
-	// Здесь можно добавить логику для отображения страницы администратора
-	tmpl := template.Must(template.ParseFiles("templates/admin_page.html"))
-	err := tmpl.Execute(w, nil)
+// Обработчик для отображения списка сотрудников
+func AdminEmployeesPage(w http.ResponseWriter, r *http.Request) {
+	// Получаем список всех пользователей
+	users, err := GetAllUsers()
 	if err != nil {
-		http.Error(w, "Ошибка при выполнении шаблона: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Ошибка получения списка сотрудников: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Предположим, что текущий пользователь — это администратор, информация о котором нам также нужна
+	userIDStr := r.URL.Query().Get("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем информацию о текущем пользователе
+	userName, err := GetUserNameByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка получения имени пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	role, err := GetUserRoleByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка получения роли пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Подготовка данных для передачи в шаблон
+	data := struct {
+		UserID   int
+		UserName string
+		Role     string
+		Users    []User
+	}{
+		UserID:   userID,
+		UserName: userName,
+		Role:     role,
+		Users:    users,
+	}
+
+	// Выполняем рендеринг шаблона с обновленной структурой данных
+	err = TmplAdmin.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
 	}
 }
 
 // Обработчик для обновления данных пользователя
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		// Получаем данные из формы
-		err := r.ParseForm()
+func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Неправильный метод запроса", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем данные из формы
+	userID := r.FormValue("user_id")
+	newLogin := r.FormValue("new_login")
+	newPassword := r.FormValue("new_password")
+	newRole := r.FormValue("new_role")
+
+	// Проверяем ID пользователя
+	userIDInt, err := strconv.Atoi(userID)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	// Формируем SQL-запрос для обновления
+	query := "UPDATE users SET "
+	params := []interface{}{}
+	paramIndex := 1
+
+	if newLogin != "" {
+		query += "login = $" + strconv.Itoa(paramIndex) + ", "
+		params = append(params, newLogin)
+		paramIndex++
+	}
+
+	if newPassword != "" {
+		hashedPassword, err := HashPassword(newPassword)
 		if err != nil {
-			http.Error(w, "Ошибка при обработке формы", http.StatusInternalServerError)
+			http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
 			return
 		}
-
-		userID := r.FormValue("user_id")
-		newLogin := r.FormValue("new_login")
-		newPassword := r.FormValue("new_password")
-		newRole := r.FormValue("new_role")
-
-		// Проверка и обновление логина
-		if newLogin != "" {
-			query := "UPDATE users SET login = $1 WHERE id = $2"
-			_, err := Db.Exec(query, newLogin, userID)
-			if err != nil {
-				http.Error(w, "Ошибка при обновлении логина", http.StatusInternalServerError)
-				return
-			}
-		}
-
-		// Проверка и обновление пароля
-		if newPassword != "" {
-			hashedPassword, err := HashPassword(newPassword)
-			if err != nil {
-				http.Error(w, "Ошибка при хешировании пароля", http.StatusInternalServerError)
-				return
-			}
-
-			query := "UPDATE users SET password = $1 WHERE id = $2"
-			_, err = Db.Exec(query, hashedPassword, userID)
-			if err != nil {
-				http.Error(w, "Ошибка при обновлении пароля", http.StatusInternalServerError)
-				return
-			}
-		}
-
-		// Обновление роли
-		if newRole != "" {
-			query := "UPDATE users SET role = $1 WHERE id = $2"
-			_, err := Db.Exec(query, newRole, userID)
-			if err != nil {
-				http.Error(w, "Ошибка при обновлении роли", http.StatusInternalServerError)
-				return
-			}
-		}
-
-		// Перенаправление на страницу администратора
-		http.Redirect(w, r, "/admin_page", http.StatusFound)
+		query += "password = $" + strconv.Itoa(paramIndex) + ", "
+		params = append(params, hashedPassword)
+		paramIndex++
 	}
+
+	if newRole != "" {
+		query += "role = $" + strconv.Itoa(paramIndex) + " "
+		params = append(params, newRole)
+	} else {
+		// Убираем последнюю запятую
+		query = query[:len(query)-2] + " "
+	}
+
+	query += "WHERE id = $" + strconv.Itoa(paramIndex)
+	params = append(params, userIDInt)
+
+	// Выполняем запрос
+	_, err = Db.Exec(query, params...)
+	if err != nil {
+		http.Error(w, "Ошибка при обновлении данных пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin_page", http.StatusSeeOther)
+}
+
+// Обработчик для страницы главного редактора
+func ChiefEditorPage(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("id")
+	if userIDStr == "" {
+		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	userName, err := GetUserNameByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	role, err := GetUserRoleByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		UserID   int
+		UserName string
+		Role     string
+	}{
+		UserID:   userID,
+		UserName: userName,
+		Role:     role,
+	}
+
+	err = TmplChiefEditor.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Обработчик для страницы редактора раздела
+func SectionEditorPage(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("id")
+	if userIDStr == "" {
+		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	userName, err := GetUserNameByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	role, err := GetUserRoleByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		UserID   int
+		UserName string
+		Role     string
+	}{
+		UserID:   userID,
+		UserName: userName,
+		Role:     role,
+	}
+
+	err = TmplSectionEditor.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Обработчик для страницы автора
+func AuthorPage(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("id")
+	if userIDStr == "" {
+		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	userName, err := GetUserNameByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	role, err := GetUserRoleByIDFromDB(userID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		UserID   int
+		UserName string
+		Role     string
+	}{
+		UserID:   userID,
+		UserName: userName,
+		Role:     role,
+	}
+
+	err = TmplAuthor.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// Остальные обработчики
+func AssignTopics(w http.ResponseWriter, r *http.Request) {
+	// Логика для назначения тем
+}
+
+func CheckPublications(w http.ResponseWriter, r *http.Request) {
+	// Логика для проверки публикаций
+}
+
+func AssignPublications(w http.ResponseWriter, r *http.Request) {
+	// Логика для назначения публикаций
+}
+
+func EditPublication(w http.ResponseWriter, r *http.Request) {
+	// Логика для редактирования публикаций
+}
+
+func ApprovePublication(w http.ResponseWriter, r *http.Request) {
+	// Логика для утверждения публикаций
+}
+
+func CreatePublication(w http.ResponseWriter, r *http.Request) {
+	// Логика для создания публикации
+}
+
+func FixComments(w http.ResponseWriter, r *http.Request) {
+	// Логика для исправления комментариев
 }

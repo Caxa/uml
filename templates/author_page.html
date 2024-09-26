@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Страница Автора</title>
+</head>
+<body>
+    <h1>Добро пожаловать на страницу Автора!</h1>
+    <p>Здесь авторы могут готовить публикации.</p>
+
+    <h2>Подготовка публикации</h2>
+    <form action="/author/create_publication" method="POST">
+        <label for="title">Заголовок:</label>
+        <input type="text" id="title" name="title" required><br>
+
+        <label for="content">Содержание:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50"></textarea><br><br>
+
+        <button type="submit">Создать публикацию</button>
+    </form>
+
+    <h2>Исправление замечаний редактора отдела</h2>
+    <form action="/author/fix_comments" method="POST">
+        <label for="publication_id">ID Публикации:</label>
+        <input type="text" id="publication_id" name="publication_id" required><br>
+
+        <label for="corrections">Исправления:</label><br>
+        <textarea id="corrections" name="corrections" rows="10" cols="50"></textarea><br><br>
+
+        <button type="submit">Отправить исправления</button>
+    </form>
+</body>
+</html>

@@ -73,7 +73,32 @@
     {{else}}
     <p>Темы не найдены.</p>
     {{end}}
-    
+    <h2>Черновики публикаций:</h2>
+    {{if .DraftPublications}}
+    <ul>
+        {{range .DraftPublications}}
+        <li>
+            <form action="/chief_editor/edit_draft" method="POST">
+                <input type="hidden" name="article_id" value="{{.ID}}">
+
+                <label for="title-{{.ID}}">Заголовок:</label>
+                <input type="text" id="title-{{.ID}}" name="title" value="{{.Title}}" required><br>
+
+                <label for="content-{{.ID}}">Контент:</label>
+                <textarea id="content-{{.ID}}" name="content" rows="4" cols="50">{{.Content}}</textarea><br>
+
+                <label for="remarks-{{.ID}}">Комментарии:</label>
+                <textarea id="remarks-{{.ID}}" name="remarks" rows="2" cols="50">{{.Remarks}}</textarea><br>
+
+                <button type="submit">Сохранить изменения</button>
+            </form>
+        </li>
+        {{end}}
+    </ul>
+    {{else}}
+    <p>Нет черновиков для проверки.</p>
+    {{end}}
+
 </body>
 
 </html>

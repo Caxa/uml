@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание новой публикации</title>
+</head>
+<body>
+    <h1>Создание новой публикации</h1>
+
+    <p>Тема: <strong>{{.TopicName}}</strong></p>
+
+    <form action="/author/create_publication" method="POST">
+        <input type="hidden" name="topic_id" value="{{.TopicID}}">
+        <input type="hidden" name="author_id" value="{{.AuthorID}}">
+
+        <label for="title">Название публикации:</label><br>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <label for="content">Содержание публикации:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50" required></textarea><br><br>
+
+        <button type="submit">Создать публикацию</button>
+    </form>
+
+    <p><a href="/author_page?id={{.AuthorID}}">Вернуться на страницу автора</a></p>
+</body>
+</html>

@@ -6,22 +6,25 @@
     <title>Страница администратора</title>
 </head>
 <body>
-    <h1>Добро пожаловать на админскую страницу!</h1>
-    <p>Здесь могут находиться функции и инструменты для администраторов.</p>
+    <h1>Добро пожаловать на админскую страницу, {{ .UserName }}!</h1>
+    <p>Здесь находятся функции и инструменты для администраторов.</p>
 
-    <h2>Изменить данные пользователя</h2>
-    <form action="/update_user" method="POST">
-        <label for="user_id">ID пользователя:</label>
-        <input type="text" id="user_id" name="user_id" required><br>
 
-        <label for="new_login">Новый логин:</label>
-        <input type="text" id="new_login" name="new_login"><br>
+    
 
-        <label for="new_password">Новый пароль:</label>
-        <input type="password" id="new_password" name="new_password"><br>
+    <!-- Форма для добавления нового сотрудника -->
+    <h2>Добавить сотрудника</h2>
+    <form action="/add_user" method="POST">
+        <input type="hidden" name="admin_id" value="{{ .UserID }}"> <!-- Передаем ID администратора -->
 
-        <label for="new_role">Новая роль:</label>
-        <select id="new_role" name="new_role">
+        <label for="login">Логин:</label>
+        <input type="text" id="login" name="login" required><br>
+
+        <label for="password">Пароль:</label>
+        <input type="password" id="password" name="password" required><br>
+
+        <label for="role">Роль:</label>
+        <select id="role" name="role">
             <option value="user">User</option>
             <option value="admin">Admin</option>
             <option value="chief_editor">Chief Editor</option>
@@ -29,19 +32,29 @@
             <option value="author">Author</option>
         </select><br><br>
 
-        <button type="submit">Обновить данные</button>
+        <button type="submit">Добавить сотрудника</button>
     </form>
 
+    <!-- Кнопка для показа всех сотрудников -->
     <h2>Список всех сотрудников</h2>
     <form action="/admin/employees" method="GET">
-        <input type="hidden" name="id" value="{{ .UserID }}">
+        <input type="hidden" name="id" value="{{ .UserID }}"> <!-- Передаем ID администратора как id -->
         <button type="submit">Показать всех сотрудников</button>
     </form>
-    {{if .Users}} <!-- Проверяем наличие списка сотрудников -->
+
+    <!-- Список сотрудников с кнопками для удаления -->
+    {{if .Users}}
     <h3>Сотрудники:</h3>
     <ul>
         {{range .Users}}
-        <li>ID: {{.IDuser}}, Логин: {{.Login}}, Роль: {{.Role}}</li>
+        <li>
+            ID: {{.IDuser}}, Логин: {{.Login}}, Роль: {{.Role}}
+            <form action="/delete_user" method="POST" style="display:inline;">
+                <input type="hidden" name="admin_id" value="{{ $.UserID }}"> <!-- Передаем ID администратора -->
+                <input type="hidden" name="user_id" value="{{.IDuser}}">
+                <button type="submit" onclick="return confirm('Вы уверены, что хотите удалить сотрудника?');">Удалить</button>
+            </form>
+        </li>
         {{end}}
     </ul>
     {{else}}

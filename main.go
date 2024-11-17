@@ -3,7 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
-	"uml/handlers"
+
+	"example.com/myproject/handlers"
 )
 
 func main() {
@@ -21,14 +22,26 @@ func main() {
 
 	// Дополнительные маршруты для функционала
 	http.HandleFunc("/admin/employees", handlers.AdminEmployeesPage)
-	http.HandleFunc("/update_user", handlers.UpdateUserHandler)
-	http.HandleFunc("/chief_editor/assign_topics", handlers.AssignTopics)
-	http.HandleFunc("/chief_editor/check_publications", handlers.CheckPublications)
+
+	http.HandleFunc("/chief_editor/assign_topics", handlers.AssignTopicHandler)
+	http.HandleFunc("/chief_editor/delete_topic", handlers.DeleteTopicHandler)
+	http.HandleFunc("/chief_editor/check_publications", handlers.CheckPublicationsHandler)
+	http.HandleFunc("/chief_editor/edit_draft", handlers.EditDraftHandler)
+
 	http.HandleFunc("/section_editor/assign_publications", handlers.AssignPublications)
 	http.HandleFunc("/section_editor/edit_publication", handlers.EditPublication)
-	http.HandleFunc("/section_editor/approve_publication", handlers.ApprovePublication)
-	http.HandleFunc("/author/create_publication", handlers.CreatePublication)
-	http.HandleFunc("/author/fix_comments", handlers.FixComments)
+	//http.HandleFunc("/section_editor/approve_publication", handlers.ApprovePublication)
+
+	//http.HandleFunc("/author/fix_comments", handlers.FixComments)
+
+	// дейстаивя админа
+	http.HandleFunc("/add_user", handlers.AddUserHandler)
+	http.HandleFunc("/delete_user", handlers.DeleteUserHandler)
+
+	// автор
+	http.HandleFunc("/author/create_publication", handlers.CreatePublicationHandler)
+	http.HandleFunc("/author/fix_comments", handlers.FixCommentsHandler)
+	http.HandleFunc("/author/create_publication_form", handlers.AuthorCreatePublicationFormHandler)
 
 	log.Println("Сервер запущен на порту :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

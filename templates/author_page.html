@@ -6,29 +6,38 @@
     <title>Страница Автора</title>
 </head>
 <body>
-    <h1>Добро пожаловать на страницу Автора!</h1>
-    <p>Здесь авторы могут готовить публикации.</p>
+    <h1>Добро пожаловать, {{.AuthorID}}!</h1>
+    <p>Вы можете выбрать любую тему для создания публикации.</p>
 
-    <h2>Подготовка публикации</h2>
-    <form action="/author/create_publication" method="POST">
-        <label for="title">Заголовок:</label>
-        <input type="text" id="title" name="title" required><br>
+    <h2>Доступные темы</h2>
+    <ul>
+        {{range .Topics}}
+        <li>
+            <strong>{{.Topic}}</strong> - {{.Department}}
+            <form action="/author/create_publication_form" method="GET">
+                <input type="hidden" name="topic_id" value="{{.ID}}">
+                <input type="hidden" name="author_id" value="{{$.AuthorID}}">
+                <button type="submit">Создать публикацию по этой теме</button>
+            </form>
+        </li>
+        {{else}}
+        <p>Нет доступных тем для создания публикации.</p>
+        {{end}}
+    </ul>
 
-        <label for="content">Содержание:</label><br>
-        <textarea id="content" name="content" rows="10" cols="50"></textarea><br><br>
-
-        <button type="submit">Создать публикацию</button>
-    </form>
-
-    <h2>Исправление замечаний редактора отдела</h2>
-    <form action="/author/fix_comments" method="POST">
-        <label for="publication_id">ID Публикации:</label>
-        <input type="text" id="publication_id" name="publication_id" required><br>
-
-        <label for="corrections">Исправления:</label><br>
-        <textarea id="corrections" name="corrections" rows="10" cols="50"></textarea><br><br>
-
-        <button type="submit">Отправить исправления</button>
-    </form>
+    <h2>Мои публикации</h2>
+    <ul>
+        {{range .Publications}}
+        <li>
+            <strong>{{.Title}}</strong> - Статус: {{.Status}}
+            <form action="/author/edit_publication" method="GET" style="display:inline;">
+                <input type="hidden" name="publication_id" value="{{.ID}}">
+                <button type="submit">Редактировать</button>
+            </form>
+        </li>
+        {{else}}
+        <p>У вас нет публикаций.</p>
+        {{end}}
+    </ul>
 </body>
 </html>

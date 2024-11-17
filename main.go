@@ -44,6 +44,8 @@ func main() {
 	http.HandleFunc("/author/create_publication", handlers.CreatePublicationHandler)
 	http.HandleFunc("/author/fix_comments", handlers.FixCommentsHandler)
 	http.HandleFunc("/author/create_publication_form", handlers.AuthorCreatePublicationFormHandler)
+	http.HandleFunc("/author/edit_publication", handlers.EditPublicationHandler)
+	http.HandleFunc("/author/update_publication", handlers.UpdatePublicationHandler)
 
 	log.Println("Сервер запущен на порту :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

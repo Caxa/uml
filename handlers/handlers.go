@@ -56,6 +56,7 @@ var TmplChiefEditor = template.Must(template.ParseFiles("templates/chief_editor_
 var TmplSectionEditor = template.Must(template.ParseFiles("templates/section_editor_page.html")) // Шаблон страницы редактора раздела
 var TmplAuthor = template.Must(template.ParseFiles("templates/author_page.html"))
 var TmplCreatePublication = template.Must(template.ParseFiles("templates/сreate_publication.html"))
+var TmplEditPublication = template.Must(template.ParseFiles("templates/edit_publication.html"))
 
 var store = sessions.NewCookieStore([]byte("секретный-ключ"))
 

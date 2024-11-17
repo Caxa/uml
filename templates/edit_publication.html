@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование публикации</title>
+</head>
+<body>
+    <h1>Редактирование публикации</h1>
+    <h2>{{.Title}}</h2>
+
+    <p><strong>Статус:</strong> {{.Status}}</p>
+
+    {{if .Remarks}}
+    <p style="color: red;"><strong>Замечания редактора:</strong> {{.Remarks}}</p>
+    {{end}}
+
+    <form action="/author/update_publication" method="POST">
+        <input type="hidden" name="publication_id" value="{{.ID}}">
+        <input type="hidden" name="author_id" value="{{.AuthorID}}">
+
+        <label for="title">Название:</label><br>
+        <input type="text" id="title" name="title" value="{{.Title}}" required><br><br>
+
+        <label for="content">Содержание:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50" required>{{.Content}}</textarea><br><br>
+
+        <button type="submit">Сохранить изменения</button>
+    </form>
+
+    <a href="/chief_editor_page?id={{.AuthorID}}">Вернуться назад</a>
+</body>
+</html>

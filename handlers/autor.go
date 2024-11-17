@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
@@ -363,4 +364,81 @@ func AuthorPage(w http.ResponseWriter, r *http.Request) {
 	if err := TmplAuthor.Execute(w, data); err != nil {
 		http.Error(w, "Ошибка выполнения шаблона", http.StatusInternalServerError)
 	}
+}
+func EditPublicationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем идентификатор публикации
+	publicationIDStr := r.URL.Query().Get("publication_id")
+	publicationID, err := strconv.Atoi(publicationIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор публикации", http.StatusBadRequest)
+		return
+	}
+
+	// Получаем информацию о публикации
+	var title, content, status, remarks string
+	var authorID int
+	query := `SELECT title, content, status, remarks, author_id FROM publications WHERE id = $1`
+	err = Db.QueryRow(query, publicationID).Scan(&title, &content, &status, &remarks, &authorID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Публикация не найдена", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка при получении данных публикации: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Проверка статуса публикации
+	if status == "approved" {
+		http.Error(w, "Редактирование запрещено: публикация уже одобрена", http.StatusForbidden)
+		return
+	}
+
+	// Данные для шаблона
+	data := map[string]interface{}{
+		"ID":       publicationID,
+		"Title":    title,
+		"Content":  content,
+		"Status":   status,
+		"Remarks":  remarks,
+		"AuthorID": authorID,
+	}
+
+	// Рендеринг шаблона
+	if err := TmplEditPublication.ExecuteTemplate(w, "edit_publication.html", data); err != nil {
+		http.Error(w, "Ошибка при рендеринге шаблона: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+func UpdatePublicationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем данные из формы
+	publicationIDStr := r.FormValue("publication_id")
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+
+	publicationID, err := strconv.Atoi(publicationIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор публикации", http.StatusBadRequest)
+		return
+	}
+
+	// Обновляем публикацию в базе данных
+	updateQuery := `UPDATE publications SET title = $1, content = $2, status = 'pending', updated_at = $3 WHERE id = $4`
+	_, err = Db.Exec(updateQuery, title, content, time.Now(), publicationID)
+	if err != nil {
+		http.Error(w, "Ошибка при обновлении публикации: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Перенаправление обратно к списку публикаций автора
+	http.Redirect(w, r, "/author_page?id="+r.FormValue("author_id"), http.StatusSeeOther)
 }

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Страница Автора</title>
 </head>
+
 <body>
     <h1>Добро пожаловать, {{.AuthorID}}!</h1>
     <p>Вы можете выбрать любую тему для создания публикации.</p>
@@ -30,14 +32,21 @@
         {{range .Publications}}
         <li>
             <strong>{{.Title}}</strong> - Статус: {{.Status}}
+
+            {{if eq .Status "approved"}}
+            <span style="color: green;">Публикация принята</span>
+            {{else}}
             <form action="/author/edit_publication" method="GET" style="display:inline;">
                 <input type="hidden" name="publication_id" value="{{.ID}}">
                 <button type="submit">Редактировать</button>
             </form>
+            {{end}}
         </li>
         {{else}}
         <p>У вас нет публикаций.</p>
         {{end}}
     </ul>
+
 </body>
+
 </html>

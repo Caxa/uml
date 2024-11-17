@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -34,96 +35,6 @@ func AssignTopicHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
 }
 
-// Просмотр текущих тем
-func ViewTopicsHandler(w http.ResponseWriter, r *http.Request) {
-	editorIDStr := r.URL.Query().Get("editor_id")
-	editorID, err := strconv.Atoi(editorIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор главного редактора", http.StatusBadRequest)
-		return
-	}
-
-	topics, err := GetTopicsByEditorID(editorID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении тем", http.StatusInternalServerError)
-		return
-	}
-
-	data := struct {
-		EditorID int
-		Topics   []Topic
-	}{
-		EditorID: editorID,
-		Topics:   topics,
-	}
-
-	if err := TmplChiefEditor.Execute(w, data); err != nil {
-		http.Error(w, "Ошибка выполнения шаблона", http.StatusInternalServerError)
-	}
-}
-func DeleteTopicHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-		return
-	}
-
-	topicIDStr := r.FormValue("topic_id")
-	editorIDStr := r.FormValue("editor_id")
-
-	// Преобразование идентификаторов
-	topicID, err := strconv.Atoi(topicIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор темы", http.StatusBadRequest)
-		return
-	}
-
-	editorID, err := strconv.Atoi(editorIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор редактора", http.StatusBadRequest)
-		return
-	}
-
-	// Выполнение запроса на удаление
-	query := "DELETE FROM user_topics WHERE id = $1 AND editor_id = $2"
-	result, err := Db.Exec(query, topicID, editorID)
-	if err != nil {
-		http.Error(w, "Ошибка при удалении темы", http.StatusInternalServerError)
-		return
-	}
-
-	// Проверка количества удаленных записей
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		log.Printf("Тема с ID %d для редактора %d не найдена", topicID, editorID)
-		http.Error(w, "Тема не найдена", http.StatusNotFound)
-		return
-	}
-
-	log.Printf("Тема с ID %d для редактора %d успешно удалена", topicID, editorID)
-
-	// Перенаправление на страницу главного редактора
-	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
-}
-
-// Вспомогательная функция для получения тем
-func GetTopicsByEditorID(editorID int) ([]Topic, error) {
-	rows, err := Db.Query("SELECT id, topic, department FROM user_topics WHERE editor_id = $1", editorID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	topics := []Topic{}
-	for rows.Next() {
-		var topic Topic
-		if err := rows.Scan(&topic.ID, &topic.Topic, &topic.Department); err != nil {
-			return nil, err
-		}
-		topics = append(topics, topic)
-	}
-	return topics, nil
-}
-
 // Вспомогательная функция для получения подготовленных публикаций
 func GetPreparedPublications() ([]Publication, error) {
 	query := "SELECT id, title, content, department, created_at FROM publications WHERE status = 'draft'"
@@ -143,82 +54,6 @@ func GetPreparedPublications() ([]Publication, error) {
 		publications = append(publications, pub)
 	}
 	return publications, nil
-}
-
-// ChiefEditorPage обрабатывает отображение страницы главного редактора
-func ChiefEditorPage(w http.ResponseWriter, r *http.Request) {
-	// Получаем ID редактора из параметров запроса
-	editorIDStr := r.URL.Query().Get("id")
-	if editorIDStr == "" {
-		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
-		return
-	}
-
-	// Конвертируем editorID в целое число
-	editorID, err := strconv.Atoi(editorIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
-		return
-	}
-
-	// Получаем имя и роль главного редактора
-	userName, err := GetUserNameByIDFromDB(editorID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	role, err := GetUserRoleByIDFromDB(editorID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем темы для отображения на странице
-	topics, err := GetTopicsByEditorID(editorID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении списка тем из базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем подготовленные публикации
-	publications, err := GetPublications()
-	if err != nil {
-		http.Error(w, "Ошибка при получении публикаций", http.StatusInternalServerError)
-		return
-	}
-
-	// Получаем черновики публикаций
-	draftPublications, err := GetDraftPublications()
-	if err != nil {
-		http.Error(w, "Ошибка при получении черновиков", http.StatusInternalServerError)
-		return
-	}
-
-	// Подготавливаем данные для передачи в шаблон
-	data := struct {
-		UserID            int
-		EditorID          int
-		UserName          string
-		Role              string
-		Topics            []Topic
-		Publications      []Publication
-		DraftPublications []Publication
-	}{
-		UserID:            editorID,
-		EditorID:          editorID,
-		UserName:          userName,
-		Role:              role,
-		Topics:            topics,
-		Publications:      publications,
-		DraftPublications: draftPublications,
-	}
-
-	// Выполняем рендеринг шаблона с передачей данных
-	if err := TmplChiefEditor.Execute(w, data); err != nil {
-		log.Printf("Ошибка выполнения шаблона: %v", err)
-		http.Error(w, "Ошибка выполнения шаблона", http.StatusInternalServerError)
-	}
 }
 
 // Проверка публикаций
@@ -285,54 +120,6 @@ func GetDraftPublications() ([]Publication, error) {
 	return publications, nil
 }
 
-// Обработчик для одобрения публикации
-func ApprovePublicationHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-		return
-	}
-
-	articleIDStr := r.FormValue("article_id")
-	articleID, err := strconv.Atoi(articleIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор статьи", http.StatusBadRequest)
-		return
-	}
-
-	query := "UPDATE publications SET status = 'approved', updated_at = $1 WHERE id = $2"
-	_, err = Db.Exec(query, time.Now(), articleID)
-	if err != nil {
-		http.Error(w, "Ошибка при обновлении статуса публикации", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/chief_editor_page?id="+r.FormValue("editor_id"), http.StatusSeeOther)
-}
-
-// Обработчик для отправки публикации на доработку
-func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
-		return
-	}
-
-	articleIDStr := r.FormValue("article_id")
-	articleID, err := strconv.Atoi(articleIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор статьи", http.StatusBadRequest)
-		return
-	}
-
-	query := "UPDATE publications SET status = 'revision', updated_at = $1 WHERE id = $2"
-	_, err = Db.Exec(query, time.Now(), articleID)
-	if err != nil {
-		http.Error(w, "Ошибка при обновлении статуса публикации", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/chief_editor_page?id="+r.FormValue("editor_id"), http.StatusSeeOther)
-}
-
 // Изменение черновика публикации
 func EditDraftHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -387,4 +174,288 @@ func GetPublications() ([]Publication, error) {
 	}
 
 	return publications, nil
+}
+func ViewTopicsHandler(w http.ResponseWriter, r *http.Request) {
+	editorIDStr := r.URL.Query().Get("editor_id")
+	editorID, err := strconv.Atoi(editorIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор главного редактора", http.StatusBadRequest)
+		return
+	}
+
+	topics, err := GetTopicsByEditorID(editorID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении тем", http.StatusInternalServerError)
+		return
+	}
+
+	// Передаем EditorID для каждой темы, чтобы шаблон мог его использовать
+	data := struct {
+		EditorID int
+		Topics   []Topic
+	}{
+		EditorID: editorID,
+		Topics:   topics,
+	}
+
+	if err := TmplChiefEditor.Execute(w, data); err != nil {
+		http.Error(w, "Ошибка выполнения шаблона", http.StatusInternalServerError)
+	}
+}
+func GetTopicsByEditorID(editorID int) ([]Topic, error) {
+	rows, err := Db.Query("SELECT id, topic, department FROM user_topics WHERE editor_id = $1", editorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	topics := []Topic{}
+	for rows.Next() {
+		var topic Topic
+		if err := rows.Scan(&topic.ID, &topic.Topic, &topic.Department); err != nil {
+			return nil, err
+		}
+		topic.EditorID = editorID // Добавляем EditorID вручную
+		topics = append(topics, topic)
+	}
+	return topics, nil
+}
+func ChiefEditorPage(w http.ResponseWriter, r *http.Request) {
+	editorIDStr := r.URL.Query().Get("id")
+	if editorIDStr == "" {
+		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
+		return
+	}
+
+	editorID, err := strconv.Atoi(editorIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
+		return
+	}
+
+	userName, err := GetUserNameByIDFromDB(editorID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	topics, err := GetTopicsByEditorID(editorID)
+	if err != nil {
+		http.Error(w, "Ошибка при получении списка тем из базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	publications, err := GetPublications()
+	if err != nil {
+		http.Error(w, "Ошибка при получении публикаций", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		EditorID     int
+		UserName     string
+		Topics       []Topic
+		Publications []Publication
+	}{
+		EditorID:     editorID,
+		UserName:     userName,
+		Topics:       topics,
+		Publications: publications,
+	}
+
+	if err := TmplChiefEditor.Execute(w, data); err != nil {
+		http.Error(w, "Ошибка выполнения шаблона", http.StatusInternalServerError)
+	}
+}
+
+func DeleteTopicHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получение данных из формы
+	topicIDStr := r.FormValue("topic_id")
+	editorIDStr := r.FormValue("editor_id")
+
+	// Проверка корректности topic_id
+	topicID, err := strconv.Atoi(topicIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор темы", http.StatusBadRequest)
+		return
+	}
+
+	// Проверка корректности editor_id
+	editorID, err := strconv.Atoi(editorIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор редактора", http.StatusBadRequest)
+		return
+	}
+
+	// Выполнение удаления
+	query := "DELETE FROM user_topics WHERE id = $1 AND editor_id = $2"
+	result, err := Db.Exec(query, topicID, editorID)
+	if err != nil {
+		http.Error(w, "Ошибка при удалении темы из базы данных: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Проверяем, была ли удалена запись
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
+		http.Error(w, "Тема не найдена или уже удалена", http.StatusNotFound)
+		return
+	}
+
+	// Перенаправление после успешного удаления
+	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+}
+
+/*
+	func ApprovePublicationHandler(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Получаем идентификаторы статьи и редактора
+		articleIDStr := r.FormValue("article_id")
+		editorIDStr := r.FormValue("editor_id")
+
+		articleID, err := strconv.Atoi(articleIDStr)
+		if err != nil {
+			http.Error(w, "Неверный идентификатор статьи", http.StatusBadRequest)
+			return
+		}
+
+		editorID, err := strconv.Atoi(editorIDStr)
+		if err != nil {
+			http.Error(w, "Неверный идентификатор редактора", http.StatusBadRequest)
+			return
+		}
+
+		// Проверяем, существует ли статья и принадлежит ли она редактору
+		var dbEditorID int
+		query := `SELECT author_id FROM publications WHERE id = $1`
+		err = Db.QueryRow(query, articleID).Scan(&dbEditorID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "Публикация не найдена", http.StatusNotFound)
+			} else {
+				http.Error(w, "Ошибка при проверке публикации: "+err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		if dbEditorID != editorID {
+			http.Error(w, "Неверный редактор", http.StatusForbidden)
+			return
+		}
+
+		// Обновляем статус статьи в базе данных
+		updateQuery := `UPDATE publications SET status = 'approved', updated_at = $1 WHERE id = $2`
+		_, err = Db.Exec(updateQuery, time.Now(), articleID)
+		if err != nil {
+			http.Error(w, "Ошибка при обновлении статуса публикации: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Перенаправление обратно на страницу редактора
+		// Перенаправление обратно на страницу редактора с сохранением параметра id
+		http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+
+}
+*/
+func ApprovePublicationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем идентификаторы статьи и редактора
+	articleIDStr := r.FormValue("article_id")
+	editorIDStr := r.FormValue("editor_id")
+
+	articleID, err := strconv.Atoi(articleIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор статьи", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем статус публикации
+	var status string
+	query := `SELECT status FROM publications WHERE id = $1`
+	err = Db.QueryRow(query, articleID).Scan(&status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Публикация не найдена", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Ошибка при проверке статуса публикации: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Проверяем, одобрена ли публикация
+	if status == "approved" {
+		http.Error(w, "Публикация уже одобрена", http.StatusBadRequest)
+		return
+	}
+
+	// Обновляем статус статьи в базе данных
+	updateQuery := `UPDATE publications SET status = 'approved', updated_at = $1 WHERE id = $2`
+	_, err = Db.Exec(updateQuery, time.Now(), articleID)
+	if err != nil {
+		http.Error(w, "Ошибка при обновлении статуса публикации: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Перенаправление обратно на страницу редактора
+	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+}
+
+func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Получаем идентификатор статьи и замечания
+	articleIDStr := r.FormValue("article_id")
+	remarks := r.FormValue("remarks")
+	editorIDStr := r.FormValue("editor_id")
+
+	articleID, err := strconv.Atoi(articleIDStr)
+	if err != nil {
+		http.Error(w, "Неверный идентификатор статьи", http.StatusBadRequest)
+		return
+	}
+
+	if remarks == "" {
+		http.Error(w, "Замечания не могут быть пустыми", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, существует ли статья и кому она принадлежит
+	var editorID int
+	query := `SELECT author_id FROM publications WHERE id = $1`
+	err = Db.QueryRow(query, articleID).Scan(&editorID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Публикация не найдена", http.StatusNotFound)
+		} else {
+			http.Error(w, "Ошибка при проверке публикации: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Обновляем статус статьи и добавляем замечания
+	updateQuery := `UPDATE publications SET status = 'revision', remarks = $1, updated_at = $2 WHERE id = $3`
+	_, err = Db.Exec(updateQuery, remarks, time.Now(), articleID)
+	if err != nil {
+		http.Error(w, "Ошибка при обновлении статуса публикации: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Перенаправление обратно на страницу редактора
+	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
 }

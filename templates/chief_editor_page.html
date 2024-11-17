@@ -37,22 +37,30 @@
         <li>
             <h4>Название: {{.Title}}</h4>
             <p>{{.Content}}</p>
+            {{if eq .Status "approved"}}
+            <p style="color: green;">Публикация уже одобрена</p>
+            {{else}}
             <form action="/approve_publication" method="POST" style="display:inline;">
                 <input type="hidden" name="article_id" value="{{.ID}}">
+                <input type="hidden" name="editor_id" value="{{$.EditorID}}">
                 <button type="submit">Одобрить публикацию</button>
             </form>
             <form action="/request_revision" method="POST" style="display:inline;">
                 <input type="hidden" name="article_id" value="{{.ID}}">
+                <input type="hidden" name="editor_id" value="{{$.EditorID}}">
                 <label for="remarks">Замечания:</label>
                 <input type="text" id="remarks" name="remarks" required>
                 <button type="submit">Отправить на доработку</button>
             </form>
+            {{end}}
+
         </li>
         {{end}}
     </ul>
     {{else}}
     <p>Нет неопубликованных публикаций.</p>
     {{end}}
+
 
     <!-- Отображение текущих тем, если они есть -->
     {{if .Topics}}
@@ -62,18 +70,19 @@
         <li>
             Тема: {{.Topic}}, Отдел: {{.Department}}
             <form action="/chief_editor/delete_topic" method="POST" style="display:inline;">
-                <input type="hidden" name="editor_id" value="{{.EditorID}}">
+                <input type="hidden" name="editor_id" value="{{$.EditorID}}">
                 <input type="hidden" name="topic_id" value="{{.ID}}">
                 <button type="submit"
                     onclick="return confirm('Вы уверены, что хотите удалить эту тему?');">Удалить</button>
             </form>
         </li>
+
         {{end}}
     </ul>
     {{else}}
     <p>Темы не найдены.</p>
     {{end}}
-    
+
 </body>
 
 </html>

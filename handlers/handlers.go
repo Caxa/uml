@@ -37,6 +37,7 @@ type Topic struct {
 	Title      string
 	Topic      string
 	Department string
+	EditorID   int // Добавить это поле
 }
 
 type ChiefEditorData struct {

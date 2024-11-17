@@ -27,6 +27,8 @@ func main() {
 	http.HandleFunc("/chief_editor/delete_topic", handlers.DeleteTopicHandler)
 	http.HandleFunc("/chief_editor/check_publications", handlers.CheckPublicationsHandler)
 	http.HandleFunc("/chief_editor/edit_draft", handlers.EditDraftHandler)
+	http.HandleFunc("/approve_publication", handlers.ApprovePublicationHandler)
+	http.HandleFunc("/request_revision", handlers.RequestRevisionHandler)
 
 	http.HandleFunc("/section_editor/assign_publications", handlers.AssignPublications)
 	http.HandleFunc("/section_editor/edit_publication", handlers.EditPublication)

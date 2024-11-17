@@ -382,6 +382,15 @@ func ApprovePublicationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка роли редактора
+	var role string
+	queryRole := `SELECT role FROM users WHERE id = $1`
+	err = Db.QueryRow(queryRole, editorIDStr).Scan(&role)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Проверяем статус публикации
 	var status string
 	query := `SELECT status FROM publications WHERE id = $1`
@@ -409,10 +418,15 @@ func ApprovePublicationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Перенаправление обратно на страницу редактора
-	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	// Перенаправление в зависимости от роли пользователя
+	if role == "chief_admin" {
+		http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	} else if role == "section_editor" {
+		http.Redirect(w, r, "/section_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	} else {
+		http.Error(w, "Недопустимая роль пользователя", http.StatusForbidden)
+	}
 }
-
 func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
@@ -435,6 +449,15 @@ func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Проверка роли редактора
+	var role string
+	queryRole := `SELECT role FROM users WHERE id = $1`
+	err = Db.QueryRow(queryRole, editorIDStr).Scan(&role)
+	if err != nil {
+		http.Error(w, "Ошибка при получении роли пользователя: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Проверяем, существует ли статья и кому она принадлежит
 	var editorID int
 	query := `SELECT author_id FROM publications WHERE id = $1`
@@ -442,9 +465,9 @@ func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Публикация не найдена", http.StatusNotFound)
-		} else {
-			http.Error(w, "Ошибка при проверке публикации: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
+		http.Error(w, "Ошибка при проверке публикации: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -456,6 +479,12 @@ func RequestRevisionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Перенаправление обратно на страницу редактора
-	http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	// Перенаправление в зависимости от роли пользователя
+	if role == "chief_admin" {
+		http.Redirect(w, r, "/chief_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	} else if role == "section_editor" {
+		http.Redirect(w, r, "/section_editor_page?id="+editorIDStr, http.StatusSeeOther)
+	} else {
+		http.Error(w, "Недопустимая роль пользователя", http.StatusForbidden)
+	}
 }

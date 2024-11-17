@@ -21,15 +21,16 @@ type User struct {
 }
 
 type Publication struct {
-	ID         int
-	Title      string
-	Content    string
-	TopicID    int
-	AuthorID   int
-	Status     string
-	Department string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID          int
+	Title       string
+	Content     string
+	TopicID     int
+	AuthorID    int
+	Status      string
+	Department  string
+	IsPublished bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type Topic struct {
@@ -167,48 +168,6 @@ func GetAllUsers() ([]User, error) {
 		users = append(users, user)
 	}
 	return users, nil
-}
-
-// Обработчик для страницы редактора раздела
-func SectionEditorPage(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.URL.Query().Get("id")
-	if userIDStr == "" {
-		http.Error(w, "ID пользователя не передан", http.StatusBadRequest)
-		return
-	}
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		http.Error(w, "Неверный идентификатор пользователя", http.StatusBadRequest)
-		return
-	}
-
-	userName, err := GetUserNameByIDFromDB(userID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении имени пользователя из базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	role, err := GetUserRoleByIDFromDB(userID)
-	if err != nil {
-		http.Error(w, "Ошибка при получении роли пользователя из базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	data := struct {
-		UserID   int
-		UserName string
-		Role     string
-	}{
-		UserID:   userID,
-		UserName: userName,
-		Role:     role,
-	}
-
-	err = TmplSectionEditor.Execute(w, data)
-	if err != nil {
-		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
-	}
 }
 
 // Назначение публикаций автору

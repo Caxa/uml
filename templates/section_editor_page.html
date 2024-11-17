@@ -9,34 +9,46 @@
     <h1>Добро пожаловать на страницу Редактора отдела!</h1>
     <p>Здесь редакторы отделов могут управлять публикациями.</p>
 
-    <h2>Составление списка публикаций</h2>
-    <form action="/section_editor/assign_publications" method="POST">
-        <label for="publication">Публикация:</label>
-        <input type="text" id="publication" name="publication" required><br>
+    <h2>Проверка и управление публикациями</h2>
+    {{if .Publications}}
+    <ul>
+        {{range .Publications}}
+        <li>
+            <h4>Название: {{.Title}}</h4>
+            <p>{{.Content}}</p>
+            <p>Статус: {{.Status}}</p>
+            <p>Опубликована: {{if .IsPublished}}Да{{else}}Нет{{end}}</p>
 
-        <label for="author">Автор:</label>
-        <input type="text" id="author" name="author" required><br><br>
+            {{if eq .Status "approved"}}
+                <form action="/section_editor/publish_publication" method="POST" style="display:inline;">
+                    <input type="hidden" name="article_id" value="{{.ID}}">
+                    <input type="hidden" name="editor_id" value="{{$.UserID}}">
+                    <button type="submit">Выложить публикацию</button>
+                </form>
+            {{else if eq .Status "published"}}
+                <p style="color: green;">Публикация выложена</p>
+            {{else}}
 
-        <button type="submit">Распределить по авторам</button>
-    </form>
+                
+                <form action="/approve_publication" method="POST" style="display:inline;">
+                    <input type="hidden" name="article_id" value="{{.ID}}">
+                    <input type="hidden" name="editor_id" value="{{$.UserID}}">
+                    <button type="submit">Одобрить публикацию</button>
+                </form>
+                <form action="/request_revision" method="POST" style="display:inline;">
+                    <input type="hidden" name="article_id" value="{{.ID}}">
+                    <input type="hidden" name="editor_id" value="{{$.UserID}}">
+                    <label for="remarks">Замечания:</label>
+                    <input type="text" id="remarks" name="remarks" required>
+                    <button type="submit">Отправить на доработку</button>
+                </form>
+            {{end}}
+        </li>
+        {{end}}
+    </ul>
+    {{else}}
+    <p>Нет неопубликованных публикаций.</p>
+    {{end}}
 
-    <h2>Редактирование публикации</h2>
-    <form action="/section_editor/edit_publication" method="POST">
-        <label for="publication_id">ID Публикации:</label>
-        <input type="text" id="publication_id" name="publication_id" required><br>
-
-        <label for="content">Содержание:</label><br>
-        <textarea id="content" name="content" rows="10" cols="50"></textarea><br><br>
-
-        <button type="submit">Редактировать</button>
-    </form>
-
-    <h2>Разрешение на выкладку публикации</h2>
-    <form action="/section_editor/approve_publication" method="POST">
-        <label for="publication_id_approve">ID Публикации:</label>
-        <input type="text" id="publication_id_approve" name="publication_id_approve" required><br>
-
-        <button type="submit">Разрешить выкладку</button>
-    </form>
 </body>
 </html>

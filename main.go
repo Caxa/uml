@@ -32,9 +32,6 @@ func main() {
 
 	http.HandleFunc("/section_editor/assign_publications", handlers.AssignPublications)
 	http.HandleFunc("/section_editor/edit_publication", handlers.EditPublication)
-	//http.HandleFunc("/section_editor/approve_publication", handlers.ApprovePublication)
-
-	//http.HandleFunc("/author/fix_comments", handlers.FixComments)
 
 	// дейстаивя админа
 	http.HandleFunc("/add_user", handlers.AddUserHandler)
@@ -46,6 +43,8 @@ func main() {
 	http.HandleFunc("/author/create_publication_form", handlers.AuthorCreatePublicationFormHandler)
 	http.HandleFunc("/author/edit_publication", handlers.EditPublicationHandler)
 	http.HandleFunc("/author/update_publication", handlers.UpdatePublicationHandler)
+
+	http.HandleFunc("/section_editor/publish_publication", handlers.PublishPublicationHandler)
 
 	log.Println("Сервер запущен на порту :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
